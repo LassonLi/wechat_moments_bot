@@ -9,7 +9,87 @@
 
 import anthropic
 import json
-from config import ANTHROPIC_API_KEY, COPYWRITING_PROMPT
+import os
+from typing import Optional
+from config import (
+    ANTHROPIC_API_KEY,
+    COPYWRITING_PROMPT,
+    MODEL_PROVIDER,
+    QWEN_API_KEY,
+    QWEN_BASE_URL,
+    QWEN_MODEL,
+)
+
+
+def call_ai_chat(system_msg: str, user_msg: str, model: Optional[str] = None, max_tokens: int = 200) -> tuple[str, dict]:
+    """统一的聊天调用：根据 `MODEL_PROVIDER` 选择 anthropic 或 qwen(openai兼容)
+
+    返回 (文本, meta)；meta 包含 provider 与实际使用的 model 名称。
+    """
+    provider = (MODEL_PROVIDER or "qwen").lower()
+
+    if provider == "anthropic":
+        used_model = model or "claude-sonnet-4-5"
+        client = anthropic.Anthropic(base_url="https://vip.yyds168.net", api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model=used_model,
+            max_tokens=max_tokens,
+            system=system_msg.strip(),
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        try:
+            text = message.content[0].text.strip()
+        except Exception:
+            cont = getattr(message, "content", None)
+            if isinstance(cont, list) and len(cont) > 0:
+                text = str(getattr(cont[0], "text", cont[0])).strip()
+            else:
+                text = str(message).strip()
+
+        return text, {"provider": "anthropic", "model": used_model}
+
+    # 默认走 qwen / openai 兼容层
+    try:
+        from openai import OpenAI
+    except Exception as e:
+        raise RuntimeError("OpenAI-compatible SDK not installed (required for qwen provider)") from e
+
+    used_model = model or QWEN_MODEL
+    client = OpenAI(api_key=QWEN_API_KEY or os.getenv("DASHSCOPE_API_KEY"), base_url=QWEN_BASE_URL)
+    msgs = [{"role": "system", "content": system_msg.strip()}, {"role": "user", "content": user_msg}]
+    completion = client.chat.completions.create(model=used_model, messages=msgs, max_tokens=max_tokens)
+
+    text: Optional[str] = None
+    try:
+        if hasattr(completion, "choices"):
+            first = completion.choices[0]
+            if isinstance(first, dict):
+                text = first.get("message", {}).get("content") or first.get("text")
+            else:
+                msg = getattr(first, "message", None)
+                if msg:
+                    text = getattr(msg, "content", None)
+                else:
+                    text = getattr(first, "text", None)
+    except Exception:
+        text = None
+
+    if not text:
+        cont = getattr(completion, "content", None)
+        if cont:
+            if isinstance(cont, list) and len(cont) > 0:
+                first = cont[0]
+                text = getattr(first, "text", None) or (first.get("text") if isinstance(first, dict) else None)
+            elif isinstance(cont, str):
+                text = cont
+
+    if not text:
+        try:
+            text = completion.model_dump_json()
+        except Exception:
+            text = str(completion)
+
+    return str(text).strip(), {"provider": "qwen", "model": used_model}
 
 def generate_copywriting(article: dict) -> str:
     cat = article.get("category", "ai")
@@ -17,15 +97,15 @@ def generate_copywriting(article: dict) -> str:
     user_msg = f"标题：{article['title']}\n来源：{article['source']}\n摘要：{article['summary']}\n直接输出最终配文。"
 
     try:
-        client = anthropic.Anthropic(base_url="https://vip.yyds168.net", # 或者是卖家提供的地址,
-                                     api_key=ANTHROPIC_API_KEY)
-        message = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=300,
-            system=system_msg.strip(),
-            messages=[{"role": "user", "content": user_msg}],
-        )
-        return message.content[0].text.strip()
+        result_text, meta = call_ai_chat(system_msg=system_msg, user_msg=user_msg, model=None, max_tokens=300)
+        # 将使用的模型信息写回文章对象（方便后续保存）
+        try:
+            article["copywriting_model"] = meta
+        except Exception:
+            pass
+        if not result_text:
+            raise RuntimeError("empty response")
+        return result_text.strip()
     except Exception as e:
         print(f"  [WARN] 文案生成失败: {e}")
         return f"推荐阅读：{article['title']}"
@@ -85,21 +165,14 @@ def score_article_by_title(article: dict) -> tuple[float, dict]:
     user_msg = f"标题：{article['title']}\n来源：{article['source']}"
 
     try:
-        client = anthropic.Anthropic(base_url="https://vip.yyds168.net",
-                                     api_key=ANTHROPIC_API_KEY)
-        message = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=200,
-            system=system_msg.strip(),
-            messages=[{"role": "user", "content": user_msg}],
-        )
-
-        # 检查响应结构
-        if not message.content or len(message.content) == 0:
+        result_text, meta = call_ai_chat(system_msg=system_msg, user_msg=user_msg, model=None, max_tokens=200)
+        try:
+            article["title_score_model"] = meta
+        except Exception:
+            pass
+        if not result_text:
             print(f"  [WARN] API 返回空内容")
             return 5.0, {"dimensions": {}, "comment": "API返回空响应"}
-
-        result_text = message.content[0].text.strip()
 
         # 检查是否为空
         if not result_text:
@@ -183,21 +256,14 @@ def score_article_by_content(article: dict) -> tuple[float, dict]:
     user_msg = f"标题：{article['title']}\n来源：{article['source']}\n摘要：{article['summary']}"
 
     try:
-        client = anthropic.Anthropic(base_url="https://vip.yyds168.net",
-                                     api_key=ANTHROPIC_API_KEY)
-        message = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=200,
-            system=system_msg.strip(),
-            messages=[{"role": "user", "content": user_msg}],
-        )
-
-        # 检查响应结构
-        if not message.content or len(message.content) == 0:
+        result_text, meta = call_ai_chat(system_msg=system_msg, user_msg=user_msg, model=None, max_tokens=200)
+        try:
+            article["content_score_model"] = meta
+        except Exception:
+            pass
+        if not result_text:
             print(f"  [WARN] API 返回空内容")
             return 5.0, {"dimensions": {}, "comment": "API返回空响应"}
-
-        result_text = message.content[0].text.strip()
 
         # 检查是否为空
         if not result_text:

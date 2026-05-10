@@ -24,6 +24,18 @@ def _env_int(name: str, default: int) -> int:
 # 如果未设置，默认值为空字符串（请在运行环境中设置该变量以避免调用失败）
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
+# ── Qwen / OpenAI 兼容层 (dashscope) 配置 ─────────────────────────
+# 用于支持 qwen 等通过 OpenAI 兼容 API 调用的模型（默认为 qwen）
+QWEN_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+QWEN_BASE_URL = os.getenv(
+    "QWEN_BASE_URL",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
+
+# 模型提供者：'qwen' (默认) 或 'anthropic'
+MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "qwen").lower()
+
 # ── 2. Server酱 SendKey（推送微信通知）─────────────────────────
 # 优先从环境变量读取，环境变量名：SERVERCHAN_SENDKEY
 SERVERCHAN_SENDKEY = os.getenv("SERVERCHAN_SENDKEY", "")
