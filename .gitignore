@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+.venv/
+venv/
+.Python
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# Logs and runtime files
+logs/
+*.log
+
+# Local environment variables
+.env
+
+# Data files (sensitive / generated)
+data/push_stats.json
+data/seen_articles.json
+
+# Editor swap files
+*~
+*.swp
+
+# macOS
+.DS_Store

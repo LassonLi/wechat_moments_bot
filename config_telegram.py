@@ -1,0 +1,124 @@
+# ================================================================
+#  config_telegram.py — Telegram Bot 版本配置
+# ================================================================
+
+# ── 1. Anthropic API（用于生──────────────────
+# 获取地址: https://console.anthropic.com/
+ANTHROPIC_API_KEY = "sk-ciR2eEbSydh6x5Se1zKLxo3H5KuDdqRgp4tbgA8CwRsZSc2h"
+
+# ── 2. Telegram Bot 配置 ─────────────────────────────────────
+# 如何获取：
+# 1. 在 Telegram 中搜索 @BotFather
+# 2. 发送 /newbot 创建新机器人
+# 3. 按提示设置名称，获得 Bot Token
+# 4. 获取你的 Chat ID：
+#    - 搜索 @userinfobot，发送任意消息，它会返回你的 Chat ID
+TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # 例如: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+TELEGRAM_CHAT_ID = "YOUR_CHAT_ID_HERE"      # 例如: "123456789"
+
+# ── 3. 发布节奏控制 ─────────────────────────────────────────────
+SCHEDULE = {
+    "push_hour": 16,             # 每天几点运行（24小时制）
+    "push_min": 4,               # 每天几分运行
+    "ai_per_week": 2,            # 每周推送几篇 AI 文章（1或2）
+    "hsbc_per_biweek": 1,        # 每两周推送几篇 HSBC 文章
+}
+
+# ── 4. AI 文章筛选标准 ───────────────────────────────────────────
+AI_CRITERIA = {
+    "max_age_days": 7,           # 只要最近N天内发布的文章
+    "keywords_must": [           # 标题或摘要必须包含其中至少一个
+        "大模型", "LLM", "Agent", "智能体", "RAG",
+        "MCP", "推理模型", "多模态", "Transformer",
+        "DeepSeek", "Qwen", "Claude", "GPT",
+        "微调", "LoRA", "向量数据库", "AI应用",
+        "Prompt", "Function Calling", "上下文",
+    ],
+    "keywords_ban": [            # 包含以下词的文章直接过滤
+        "限时优惠", "报名截止", "课程", "打折", "福利",
+        "招聘", "内推", "广告", "赞助",
+    ],
+}
+
+# ── 5. HSBC 文章筛选标准 ─────────────────────────────────────────
+HSBC_CRITERIA = {
+    "max_age_days": 14,
+    "keywords_must": [
+        "汇丰", "HSBC", "可持续发展", "ESG", "绿色金融",
+        "科技创新", "跨境", "亚洲市场", "普惠金融",
+        "数字化转型", "社会责任",
+    ],
+    "keywords_ban": [            # 负面内容一律过滤
+        "罚款", "处罚", "违规", "丑闻", "诉讼",
+        "争议", "负面", "裁员", "亏损", "欺诈",
+    ],
+}
+
+# ── 6. RSS 抓取来源 ──────────────────────────────────────────────
+RSS_SOURCES = [
+    # —— AI 技术类 ——
+    {
+        "name": "机器之心",
+        "url": "https://www.jiqizhixin.com/rss",
+        "category": "ai",
+    },
+    {
+        "name": "量子位",
+        "url": "https://www.qbitai.com/feed",
+        "category": "ai",
+    },
+    {
+        "name": "InfoQ中文",
+        "url": "https://www.infoq.cn/feed",
+        "category": "ai",
+    },
+    {
+        "name": "36氪",
+        "url": "https://36kr.com/feed",
+        "category": "ai",
+    },
+    {
+        "name": "腾讯云开发者",
+        "url": "https://cloud.tencent.com/developer/column/rss/1284724",
+        "category": "ai",
+    },
+    # —— HSBC 相关 ——
+    {
+        "name": "第一财经",
+        "url": "https://www.yicai.com/rss/news.xml",
+        "category": "hsbc",
+    },
+    {
+        "name": "财新网",
+        "url": "https://www.caixin.com/rss/caixinrss.xml",
+        "category": "hsbc",
+    },
+    {
+        "name": "HSBC官网",
+        "url": "https://www.hsbc.com/news-and-views/news/rss-feeds",
+        "category": "hsbc",
+    },
+]
+
+# ── 7. 配文风格 Prompt ───────────────────────────────────────────
+COPYWRITING_PROMPT = {
+    "ai": """\
+你是一位深耕 AI 行业的技术大佬，这篇朋友圈是你刚读完某篇深度文规则：
+- 语气：像是在和同行私下聊天。专业默或毒舌，坚决不要"摘要/观点"这种八股结构。
+- 结构：2-4 句话，每句话单独成段（用换行分隔）。第一句通常是主观感受（如：这思路确实狠 / 被这组实验数据惊到了）。
+- 表情符号：在合适的地方随机加入 1-2 个幽默的小表情（如：😂🤔💡🔥👀🎯😅🤷‍♂️🧐），让文案更生动，但不要过度使用。
+- 活人感要求：
+    1. 严禁使用 # 标签，不要出现"摘要"、"观点"等引导词。
+    2. 允许目的是展示专业洞察而非推销。
+写作规则：
+- 语气：克制、专业、体面。不要那种煽情的"机遇与挑战"，要像在咖啡茶歇时的闲谈。
+- 结构：2-3 句话，每句话单独成段（用换行分隔）。
+- 表情符号：可以适当加入 1 个专业但不失轻松的表情（如：💼📊✨🤝💡），保持体面感。
+- 核心：从文中拎出一个最值得关注的细节，结合当下的市场"水温"说一句话。
+- 活人感要求：
+    1. 严禁带任何 Hashtag，不许用"利好"、"共赢"这种大词。
+    2. 语气要积极但不能像"复读机"，多谈一点具体的逻辑（比如：终于看到把 ESG 玩明白的案例了）。
+    3. 像是一个真实在看行情、跑业务的人。
+- 字数：70-100字，分成 2-3 个自然段。
+""",
+}

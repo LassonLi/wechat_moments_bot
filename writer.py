@@ -1,0 +1,299 @@
+# ================================================================
+#  writer.py — 调用 AI 生成朋友圈文案 & 评估文章质量
+# ================================================================
+
+import anthropic
+import json
+from config import ANTHROPIC_API_KEY, COPYWRITING_PROMPT
+
+def generate_copywriting(article: dict) -> str:
+    cat = article.get("category", "ai")
+    system_msg = COPYWRITING_PROMPT.get(cat, COPYWRITING_PROMPT["ai"])
+    user_msg = f"标题：{article['title']}\n来源：{article['source']}\n摘要：{article['summary']}\n直接输出最终配文。"
+
+    try:
+        client = anthropic.Anthropic(base_url="https://vip.yyds168.net", # 或者是卖家提供的地址,
+                                     api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=300,
+            system=system_msg.strip(),
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        return message.content[0].text.strip()
+    except Exception as e:
+        print(f"  [WARN] 文案生成失败: {e}")
+        return f"推荐阅读：{article['title']}"
+
+def enrich_with_copywriting(articles: list[dict]) -> list[dict]:
+    """批量生成朋友圈文案并存入 moments_text 字段"""
+    for art in articles:
+        print(f"  -> 生成朋友圈文案: {art['title'][:20]}...")
+        art["copywriting"] = generate_copywriting(art)
+    return articles
+
+
+def score_article_by_title(article: dict) -> tuple[float, dict]:
+    """
+    第一轮筛选：仅根据标题评估文章质量
+    返回 (总分, 评分详情)
+    """
+    cat = article.get("category", "ai")
+
+    if cat == "ai":
+        system_msg = """你是一位资深的AI技术内容评审专家。请仅根据文章标题评估其吸引力和价值，并以JSON格式输出：
+
+评估维度：
+1. 话题热度（0-10分）：是否是当前热点话题
+2. 技术价值（0-10分）：标题是否暗示有实质性技术内容
+3. 吸引力（0-10分）：标题是否吸引人点击
+4. 受众相关性（0-10分）：是否适合技术从业者
+
+请严格按照以下JSON格式输出（不要其他内容）：
+{
+  "话题热度": 8.5,
+  "技术价值": 9.0,
+  "吸引力": 7.5,
+  "受众相关性": 8.0,
+  "总分": 8.25,
+  "评语": "简短评价（20字以内）"
+}"""
+    else:
+        system_msg = """你是一位资深的金融行业内容评审专家。请仅根据文章标题评估其价值，并以JSON格式输出：
+
+评估维度：
+1. 重要性（0-10分）：是否是重要的行业动态
+2. 时效性（0-10分）：是否是当前热点
+3. 吸引力（0-10分）：标题是否吸引人
+4. 受众相关性（0-10分）：是否适合金融从业者
+
+请严格按照以下JSON格式输出（不要其他内容）：
+{
+  "重要性": 8.5,
+  "时效性": 9.0,
+  "吸引力": 7.5,
+  "受众相关性": 8.0,
+  "总分": 8.25,
+  "评语": "简短评价（20字以内）"
+}"""
+
+    user_msg = f"标题：{article['title']}\n来源：{article['source']}"
+
+    try:
+        client = anthropic.Anthropic(base_url="https://vip.yyds168.net",
+                                     api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=200,
+            system=system_msg.strip(),
+            messages=[{"role": "user", "content": user_msg}],
+        )
+
+        # 检查响应结构
+        if not message.content or len(message.content) == 0:
+            print(f"  [WARN] API 返回空内容")
+            return 5.0, {"dimensions": {}, "comment": "API返回空响应"}
+
+        result_text = message.content[0].text.strip()
+
+        # 检查是否为空
+        if not result_text:
+            print(f"  [WARN] API 返回空字符串")
+            return 5.0, {"dimensions": {}, "comment": "API返回空字符串"}
+
+        # 清理 markdown 代码块标记
+        if result_text.startswith("```json"):
+            result_text = result_text[7:]  # 移除 ```json
+        if result_text.startswith("```"):
+            result_text = result_text[3:]  # 移除 ```
+        if result_text.endswith("```"):
+            result_text = result_text[:-3]  # 移除结尾的 ```
+        result_text = result_text.strip()
+
+        # 解析 JSON 结果
+        result = json.loads(result_text)
+        total_score = result.get("总分", 5.0)
+
+        # 构建评分详情
+        score_details = {
+            "dimensions": {k: v for k, v in result.items() if k != "总分"},
+            "comment": result.get("评语", "")
+        }
+
+        return max(0.0, min(10.0, total_score)), score_details
+    except json.JSONDecodeError as e:
+        print(f"  [WARN] JSON解析失败: {e}")
+        print(f"  [DEBUG] 尝试解析的内容: {result_text if 'result_text' in locals() else 'N/A'}")
+        return 5.0, {"dimensions": {}, "comment": "JSON解析失败"}
+    except Exception as e:
+        print(f"  [WARN] 标题评分失败: {e}")
+        print(f"  [DEBUG] 错误类型: {type(e).__name__}")
+        return 5.0, {"dimensions": {}, "comment": "评分失败"}
+
+
+def score_article_by_content(article: dict) -> tuple[float, dict]:
+    """
+    让 AI 评估单篇文章的质量，返回 (总分, 评分详情)
+    评估维度：内容价值、时效性、可读性、受众相关性
+    """
+    cat = article.get("category", "ai")
+
+    if cat == "ai":
+        system_msg = """你是一位资深的AI技术内容评审专家。请从以下维度评估文章质量，并以JSON格式输出：
+
+评估维度：
+1. 技术深度与价值（0-10分）：是否有实质性技术内容，而非纯营销
+2. 时效性与热度（0-10分）：是否是当前热点话题
+3. 可读性（0-10分）：标题和摘要是否吸引人
+4. 受众相关性（0-10分）：是否适合技术从业者阅读
+
+请严格按照以下JSON格式输出（不要其他内容）：
+{
+  "技术深度": 8.5,
+  "时效性": 9.0,
+  "可读性": 7.5,
+  "受众相关性": 8.0,
+  "总分": 8.25,
+  "评语": "简短评价（20字以内）"
+}"""
+    else:
+        system_msg = """你是一位资深的金融行业内容评审专家。请从以下维度评估文章质量，并以JSON格式输出：
+
+评估维度：
+1. 内容价值（0-10分）：是否有实质性信息，而非纯宣传
+2. 时效性与重要性（0-10分）：是否是重要的行业动态
+3. 可读性（0-10分）：标题和摘要是否吸引人
+4. 受众相关性（0-10分）：是否适合金融从业者阅读
+
+请严格按照以下JSON格式输出（不要其他内容）：
+{
+  "内容价值": 8.5,
+  "时效性": 9.0,
+  "可读性": 7.5,
+  "受众相关性": 8.0,
+  "总分": 8.25,
+  "评语": "简短评价（20字以内）"
+}"""
+
+    user_msg = f"标题：{article['title']}\n来源：{article['source']}\n摘要：{article['summary']}"
+
+    try:
+        client = anthropic.Anthropic(base_url="https://vip.yyds168.net",
+                                     api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=200,
+            system=system_msg.strip(),
+            messages=[{"role": "user", "content": user_msg}],
+        )
+
+        # 检查响应结构
+        if not message.content or len(message.content) == 0:
+            print(f"  [WARN] API 返回空内容")
+            return 5.0, {"dimensions": {}, "comment": "API返回空响应"}
+
+        result_text = message.content[0].text.strip()
+
+        # 检查是否为空
+        if not result_text:
+            print(f"  [WARN] API 返回空字符串")
+            return 5.0, {"dimensions": {}, "comment": "API返回空字符串"}
+
+        # 清理 markdown 代码块标记
+        if result_text.startswith("```json"):
+            result_text = result_text[7:]  # 移除 ```json
+        if result_text.startswith("```"):
+            result_text = result_text[3:]  # 移除 ```
+        if result_text.endswith("```"):
+            result_text = result_text[:-3]  # 移除结尾的 ```
+        result_text = result_text.strip()
+
+        # 解析 JSON 结果
+        result = json.loads(result_text)
+        total_score = result.get("总分", 5.0)
+
+        # 构建评分详情
+        score_details = {
+            "dimensions": {k: v for k, v in result.items() if k != "总分"},
+            "comment": result.get("评语", "")
+        }
+
+        return max(0.0, min(10.0, total_score)), score_details
+    except json.JSONDecodeError as e:
+        print(f"  [WARN] JSON解析失败: {e}")
+        print(f"  [DEBUG] 尝试解析的内容: {result_text if 'result_text' in locals() else 'N/A'}")
+        return 5.0, {"dimensions": {}, "comment": "JSON解析失败"}
+    except Exception as e:
+        print(f"  [WARN] 文章评分失败: {e}")
+        print(f"  [DEBUG] 错误类型: {type(e).__name__}")
+        return 5.0, {"dimensions": {}, "comment": "评分失败"}
+
+
+def rank_and_select(articles: list[dict], target_count: int, category: str = "ai") -> tuple[list[dict], list[dict]]:
+    """
+    两轮AI评分筛选文章：
+    - AI类文章：第一轮用标题打分（仅标题评分），第二轮仅对标题评分最高的2篇进行完整内容打分
+    - HSBC类文章：一轮完整内容打分
+
+    返回: (selected_articles, all_scored_articles)
+    - selected_articles: 最终选中的文章
+    - all_scored_articles: 所有参与评分的文章（包括未入选的）
+    """
+    if len(articles) <= target_count:
+        return articles, articles
+
+    # AI类文章使用两轮筛选
+    if category == "ai":
+        print(f"  -> 【第一轮】对 {len(articles)} 篇文章进行标题打分...")
+
+        # 第一轮：标题打分
+        for art in articles:
+            score, details = score_article_by_title(art)
+            art["title_score"] = score
+            art["title_score_details"] = details
+            print(f"     [标题 {score:.1f}/10] {art['title'][:40]}... - {details.get('comment', '')}")
+
+        # 按标题分数排序，选出标题得分最高的2篇用于第二轮内容打分
+        articles.sort(key=lambda x: x.get("title_score", 0), reverse=True)
+        round1_selected = articles[:2]
+        round1_rejected = articles[2:]  # 未进入第二轮的文章
+
+        print(f"  [OK] 第一轮完成，选出标题得分最高的 {len(round1_selected)} 篇用于第二轮内容评分")
+        print(f"\n  -> 【第二轮】对 {len(round1_selected)} 篇文章进行完整内容打分...")
+
+        # 第二轮：仅对标题最高的2篇进行完整内容打分
+        for art in round1_selected:
+            score, details = score_article_by_content(art)
+            art["content_score"] = score
+            art["content_score_details"] = details
+            # 最终分数 = 标题分数 * 0.3 + 内容分数 * 0.7
+            art["final_score"] = art["title_score"] * 0.3 + score * 0.7
+            print(f"     [内容 {score:.1f}/10 | 综合 {art['final_score']:.1f}/10] {art['title'][:40]}... - {details.get('comment', '')}")
+
+        # 按综合分数排序，选出最终的文章
+        round1_selected.sort(key=lambda x: x.get("final_score", 0), reverse=True)
+        final_selected = round1_selected[:target_count]
+
+        print(f"  [OK] 第二轮完成，最终选出 {len(final_selected)} 篇文章")
+
+        # 返回: (最终选中的文章, 所有参与评分的文章)
+        all_scored = round1_selected + round1_rejected
+        return final_selected, all_scored
+
+    else:
+        # HSBC类文章：一轮完整内容打分
+        print(f"  -> 开始对 {len(articles)} 篇文章进行完整内容打分...")
+
+        for art in articles:
+            score, details = score_article_by_content(art)
+            art["content_score"] = score
+            art["content_score_details"] = details
+            art["final_score"] = score
+            print(f"     [{score:.1f}/10] {art['title'][:40]}... - {details.get('comment', '')}")
+
+        # 按分数排序，选出最高分的文章
+        articles.sort(key=lambda x: x.get("final_score", 0), reverse=True)
+        selected = articles[:target_count]
+
+        print(f"  [OK] 已选出得分最高的 {len(selected)} 篇文章")
+        return selected, articles
