@@ -9,6 +9,16 @@
 
 import os
 
+
+def _env_int(name: str, default: int) -> int:
+    val = os.getenv(name)
+    if val is None or val == "":
+        return default
+    try:
+        return int(val)
+    except Exception:
+        return default
+
 # ── 1. Anthropic API（用于生成朋友圈配文）──────────────────────
 # 优先从环境变量读取，环境变量名：ANTHROPIC_API_KEY
 # 如果未设置，默认值为空字符串（请在运行环境中设置该变量以避免调用失败）
@@ -20,10 +30,12 @@ SERVERCHAN_SENDKEY = os.getenv("SERVERCHAN_SENDKEY", "")
 
 # ── 3. 发布节奏控制 ─────────────────────────────────────────────
 SCHEDULE = {
-    "push_hour": 17,             # 每天几点运行（24小时制）
-    "push_min": 49,               # 每天几分运行
-    "ai_per_week": 2,            # 每周推送几篇 AI 文章（1或2）
-    "hsbc_per_biweek": 1,        # 每两周推送几篇 HSBC 文章
+    # 优先从环境变量读取，方便通过终端临时覆盖：
+    # PUSH_HOUR, PUSH_MIN, AI_PER_WEEK, HSBC_PER_BIWEEK
+    "push_hour": _env_int("PUSH_HOUR", 17),
+    "push_min": _env_int("PUSH_MIN", 49),
+    "ai_per_week": _env_int("AI_PER_WEEK", 2),
+    "hsbc_per_biweek": _env_int("HSBC_PER_BIWEEK", 1),
 }
 
 # ── 4. AI 文章筛选标准 ───────────────────────────────────────────

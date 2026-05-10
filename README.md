@@ -101,7 +101,12 @@ python main.py test
 
 立即运行一次：
 ```bash
-python main.py
+$env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py 
+```
+
+改setup_task文件，可以执行的同时设置定时任务的时间：
+```bash
+$env:PUSH_HOUR=18; $env:PUSH_MIN=37; .\setup_task.bat
 ```
 
 生成测试推送：
