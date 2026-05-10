@@ -5,108 +5,143 @@
 
 **「让每一条朋友圈，都在为你积累职业信用与行业声望。」**
 
-在这个信息过载的时代，持续且高质量的专业输出是构建**个人品牌**最快的路径。`WeChat Moments Bot` 专为追求卓越的开发者与金融科技从业者设计，自动化抓取全球顶尖 **AI 技术干货**与 **HSBC（汇丰）财讯**，通过大模型深度理解并撰写极具洞见的配文，助你轻松打造专业、前沿、有深度的朋友圈人设。
+在这个信息过载的时代，持续且高质量的专业输出是构建**个人品牌**最快的路径。`WeChat Moments Bot` 自动化抓取全球顶尖 **AI 技术干货**与 **HSBC（汇丰）财讯**，通过大模型生成极具洞见的配文，助你轻松打造专业、前沿、有深度的 FinTech 技术专家形象。
 
 ---
 
-### 🌟 为什么选择这个工具？
+## 🌟 核心价值
 
-* **人设自动化**：告别“不知道发什么”，AI 每日为你精选高含金量资讯，确保你的朋友圈永远走在技术前沿。
-* **深度洞察力**：依托 Anthropic/QWEN 的强大总结能力，配文不再是简单的转发，而是带有“专家视角”的点评。
-* **极致省时**：从抓取、筛选、总结到推送，全流程自动化。你只需在 Server酱收到提醒后，顺手完成最后一次快意的转发。
-* **精准双赛道**：深度锁定 **AI 浪潮**与 **HSBC 全球金融动态**，完美契合 FinTech 复合型人才的定位。
-
----
-
-## 📁 架构概览
-
-```
-wechat_moments_bot/
-├── config.py           ← 逻辑中枢（支持环境变量，安全合规）
-├── main.py             ← 指挥官：主程序入口
-├── fetcher.py          ← 侦察兵：全球 RSS 实时抓取
-├── writer.py           ← 智囊团：AI 驱动的配文生成与质量评估
-├── pusher.py           ← 传递者：通过 Server酱 直达微信
-├── setup_task.bat      ← 自动化：Windows 定时任务一键配置
-├── requirements.txt    ← 运行基石
-├── data/               ← 记忆库：文章去重记录
-└── logs/               ← 运行轨迹：详尽日志
-
-```
+* **人设自动化**：AI 每日精选高含金量资讯，确保你的朋友圈永远走在技术前沿。
+* **深度洞察力**：依托 Anthropic/QWEN 深度总结，配文自带“专家视角”，拒绝机械转发。
+* **极简流转**：Server酱推送提醒，手机上一键复制粘贴，30 秒完成高质量更新。
 
 ---
 
-## ⚡ 快速启程
+## ⚡ 快速开始（环境要求：Python 3.13）
 
-**运行环境：** Python 3.13+
+### 1. 虚拟环境配置
 
-### 1. 搭建运行环境
+在项目根目录执行，确保环境独立纯净：
 
-建议使用虚拟环境以保持系统纯净：
-
-**Windows (PowerShell):**
-
+* **PowerShell (Windows)**:
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
 
 ```
 
-**macOS / Linux:**
 
+* **CMD (Windows)**:
+
+```cmd
+    python -m venv .venv
+    .venv\Scripts\activate.bat
+    ```
+*   **macOS / Linux**:
+    
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+### 2. 安装依赖
+```bash
 pip install -r requirements.txt
 
 ```
 
-### 2. 配置你的“数字大脑” (API Keys)
+### 3. 配置敏感 Key（推荐使用环境变量）
 
-为了保障安全，建议通过环境变量注入 Key（避免源码泄露）：
+为了安全，请通过命令行设置临时环境变量进行测试（不要将 Key 直接写入代码）：
 
-* `ANTHROPIC_API_KEY`: ANTHROPIC模型赋予 AI 思考能力。
-* `SERVERCHAN_SENDKEY`: 连接微信的通道。
-* `DASHSCOPE_API_KEY`: 中国制造qwen模型具有大国特色。
+* **PowerShell**:
 
-> **小贴士**：在 Windows 中，可以通过“系统属性 -> 环境变量”持久化设置这些 Key，重启终端即可生效。
+```powershell
+    $env:ANTHROPIC_API_KEY = "sk-..."
+    $env:SERVERCHAN_SENDKEY = "SCT..."
+    ```
+*   **CMD**:
+    
+```cmd
+    set ANTHROPIC_API_KEY=sk-...
+    set SERVERCHAN_SENDKEY=SCT...
+    ```
+*   **macOS / Linux**:
+    
+```bash
+    export ANTHROPIC_API_KEY="sk-..."
+    export SERVERCHAN_SENDKEY="SCT..."
+    ```
 
-### 3. 灵感初探（测试运行）
+---
 
+## ⏰ 自动化部署（Windows 定时任务）
+
+使用内置脚本实现每日自动抓取与推送。若需修改运行时间，请先更新 `config.py` 中的 `SCHEDULE` 配置。
+
+**以管理员权限配置定时任务（PowerShell）：**
+```powershell
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d %CD% && setup_task.bat" -Verb RunAs
+
+```
+
+**或者在执行时动态指定时间并配置：**
+
+```powershell
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\Users\13822\Desktop\wechat_moments_bot && set PUSH_HOUR=18 && set PUSH_MIN=44 && setup_task.bat" -Verb RunAs
+
+```
+
+---
+
+## 🛠️ 常用操作命令
+
+* **生成测试推送（检查配置是否成功）**：
 ```bash
 python main.py test
 
 ```
 
-*当手机响起 Server酱 的推送铃声时，你的朋友圈进化之旅已正式开启。*
+
+* **立即手动触发运行**：
+
+```powershell
+    # Windows 示例：设定时间并立即运行
+    $env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py 
+    ```
+*   **查看运行日志**：
+    ```bash
+    ls logs/
+    ```
 
 ---
 
-## ⏰ 生产力释放：自动化定时任务
+## 📂 目录结构
 
-无需手动干预，让脚本配合你的作息。
+```text
+wechat_moments_bot/
+├── config.py           ← 核心配置（含 RSS 源、筛选逻辑）
+├── main.py             ← 程序入口
+├── fetcher.py          ← 资讯抓取（RSS + 自动化筛选）
+├── writer.py           ← AI 文案撰写（基于大模型评分）
+├── pusher.py           ← 消息推送（Server酱接口）
+├── setup_task.bat      ← Windows 任务一键安装
+├── data/               ← 运行数据（含 seen_articles.json 去重记录）
+└── logs/               ← 详细运行日志
 
-1. **调整节奏**：在 `config.py` 中修改 `SCHEDULE`（例如设为早晨 8:30 或晚间 20:00）。
-2. **一键部署**：右键以**管理员身份**运行 `setup_task.bat`。
-3. **静候佳音**：脚本将化身你的虚拟助手，每天准时献上精心挑选的行业盛宴。
+```
 
 ---
 
-## 🛠️ 进阶自定义
+## 📄 许可与商业合作
 
-* **定制品味**：修改 `AI_CRITERIA` 和 `HSBC_CRITERIA`，调教 AI 对文章的口味。
-* **扩展信源**：在 `RSS_SOURCES` 中加入你钟爱的技术博客或媒体。
-* **人设微调**：在 `writer.py` 中调整 Prompt，让 AI 的语气更符合你的真实性格（或是冷峻专家，或是幽默极客）。
-
----
-
-## 📄 许可与商业价值
-
-* **开源基因**：采用 `Apache License 2.0` 协议，开放、包容、受保护。
-* **商业授权**：如果您希望将此方案集成到商业产品或需要定制化开发支持，请联系：`13822124279@163.com` 获取 `COMMERCIAL.md` 说明。
+* **开源许可**：本项目基于 `Apache License 2.0`。
+* **商业授权**：若用于商业产品或需法律保证，请参阅 `COMMERCIAL.md` 或联系 `13822124279@163.com`。
 
 ---
 
 **把重复的抓取留给代码，把宝贵的思考留给未来。**
-立即开始你的朋友圈**专业化**转型之路！ 🚀
+
+```
+
+```
