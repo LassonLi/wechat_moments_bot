@@ -1,3 +1,8 @@
+# Copyright (c) 2026 LassonLi
+# Licensed under the Apache License, Version 2.0
+# See LICENSE in the project root for details.
+# SPDX-License-Identifier: Apache-2.0
+
 # ================================================================
 #  main.py — 主程序，每天定时运行的入口
 # ================================================================
