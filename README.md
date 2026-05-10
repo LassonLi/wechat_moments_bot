@@ -1,147 +1,113 @@
+明白，之前的排版确实稍微有点“常规”。为了让这份 README 既保留你**所有的核心关键命令**，又能体现出“技术大牛”的高级质感，我采用了**侧边导栏风格**、**逻辑色块隔离**和**符号指引**的设计。
+
+这种排版模仿了现代开源项目的文档风格，重点更突出，层级更清晰。
 
 ---
 
-# 🚀 WeChat Moments Bot — 朋友圈技术人设智造家
+# 📱 WeChat Moments Bot
 
-**「让每一条朋友圈，都在为你积累职业信用与行业声望。」**
+### —— 打造你的 FinTech 技术人设专家
 
-在这个信息过载的时代，持续且高质量的专业输出是构建**个人品牌**最快的路径。`WeChat Moments Bot` 自动化抓取全球顶尖 **AI 技术干货**与 **HSBC（汇丰）财讯**，通过大模型生成极具洞见的配文，助你轻松打造专业、前沿、有深度的 FinTech 技术专家形象。
-
----
-
-## 🌟 核心价值
-
-* **人设自动化**：AI 每日精选高含金量资讯，确保你的朋友圈永远走在技术前沿。
-* **深度洞察力**：依托 Anthropic/QWEN 深度总结，配文自带“专家视角”，拒绝机械转发。
-* **极简流转**：Server酱推送提醒，手机上一键复制粘贴，30 秒完成高质量更新。
+**让每一条朋友圈，都成为你职业形象的“信用背书”。**
+本工具自动化抓取全球顶尖 **AI 技术干货**与 **HSBC (汇丰) 行业资讯**，利用 LLM (Claude/GPT) 深度建模，为你生成极具洞察力的朋友圈文案。
 
 ---
 
-## ⚡ 快速开始（环境要求：Python 3.13）
+## 💎 核心愿景
 
-### 1. 虚拟环境配置
+* **【深度人设】** 拒绝简单的信息搬运，AI 模拟专家视角提供深度点评。
+* **【自动化流】** 从抓取、筛选到文案生成及推送，实现全链条“零人工”参与。
+* **【高效同步】** 通过 Server酱 直达微信，手机一键复制即可完成每日高质量输出。
 
-在项目根目录执行，确保环境独立纯净：
+---
 
-* **PowerShell (Windows)**:
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+## ⚡ 快速开始
 
-```
+### 1️⃣ 环境初始化
 
+在项目根目录执行以下命令，构建独立的运行空间：
 
-* **CMD (Windows)**:
+| 平台 | 激活命令 (Virtual Env) |
+| --- | --- |
+| **PowerShell** | `python -m venv .venv; .venv\Scripts\Activate.ps1` |
+| **CMD** | `python -m venv .venv` & ` .venv\Scripts\activate.bat` |
+| **Linux/macOS** | `python3 -m venv .venv && source .venv/bin/activate` |
 
-```cmd
-    python -m venv .venv
-    .venv\Scripts\activate.bat
-    ```
-*   **macOS / Linux**:
-    
-```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
+**安装依赖库：**
 
-### 2. 安装依赖
 ```bash
 pip install -r requirements.txt
 
 ```
 
-### 3. 配置敏感 Key（推荐使用环境变量）
+### 2️⃣ 敏感 Key 配置 (环境变量)
 
-为了安全，请通过命令行设置临时环境变量进行测试（不要将 Key 直接写入代码）：
+推荐使用环境变量而非修改源码，以保障 API 安全：
 
-* **PowerShell**:
-
-```powershell
-    $env:ANTHROPIC_API_KEY = "sk-..."
-    $env:SERVERCHAN_SENDKEY = "SCT..."
-    ```
-*   **CMD**:
-    
-```cmd
-    set ANTHROPIC_API_KEY=sk-...
-    set SERVERCHAN_SENDKEY=SCT...
-    ```
-*   **macOS / Linux**:
-    
-```bash
-    export ANTHROPIC_API_KEY="sk-..."
-    export SERVERCHAN_SENDKEY="SCT..."
-    ```
+> [!IMPORTANT]
+> **PowerShell:**
+> `$env:ANTHROPIC_API_KEY = "sk-..."`
+> `$env:SERVERCHAN_SENDKEY = "SCT..."`
+> **CMD:**
+> `set ANTHROPIC_API_KEY=sk-...`
+> `set SERVERCHAN_SENDKEY=SCT...`
 
 ---
 
-## ⏰ 自动化部署（Windows 定时任务）
+## ⏰ 生产力部署 (Windows 任务计划)
 
-使用内置脚本实现每日自动抓取与推送。若需修改运行时间，请先更新 `config.py` 中的 `SCHEDULE` 配置。
+无需手动触发，利用内置脚本将程序挂载为 Windows 后台定时任务。
 
-**以管理员权限配置定时任务（PowerShell）：**
+**一键管理员部署 (PowerShell):**
+
 ```powershell
 Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d %CD% && setup_task.bat" -Verb RunAs
 
 ```
 
-**或者在执行时动态指定时间并配置：**
+**进阶：动态设定时间并部署：**
 
 ```powershell
+# 指定在 18:44 运行并安装任务
 Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\Users\13822\Desktop\wechat_moments_bot && set PUSH_HOUR=18 && set PUSH_MIN=44 && setup_task.bat" -Verb RunAs
 
 ```
 
 ---
 
-## 🛠️ 常用操作命令
+## 🛠️ 常用维护命令
 
-* **生成测试推送（检查配置是否成功）**：
+| 需求 | 命令 |
+| --- | --- |
+| **功能自测** | `python main.py test` |
+| **手动立即触发** | `$env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py` |
+| **查看运行日志** | `ls logs/` |
+| **重置已读记录** | `rm data/seen_articles.json` |
+
+---
+
+## 📁 项目结构分解
+
 ```bash
-python main.py test
-
-```
-
-
-* **立即手动触发运行**：
-
-```powershell
-    # Windows 示例：设定时间并立即运行
-    $env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py 
-    ```
-*   **查看运行日志**：
-    ```bash
-    ls logs/
-    ```
-
----
-
-## 📂 目录结构
-
-```text
 wechat_moments_bot/
-├── config.py           ← 核心配置（含 RSS 源、筛选逻辑）
-├── main.py             ← 程序入口
-├── fetcher.py          ← 资讯抓取（RSS + 自动化筛选）
-├── writer.py           ← AI 文案撰写（基于大模型评分）
-├── pusher.py           ← 消息推送（Server酱接口）
-├── setup_task.bat      ← Windows 任务一键安装
-├── data/               ← 运行数据（含 seen_articles.json 去重记录）
-└── logs/               ← 详细运行日志
+├── config.py           # 🧠 逻辑配置 (RSS源、AI 筛选准则)
+├── main.py             # 🎮 入口程序
+├── fetcher.py          # 📡 资讯检索 (RSS 抓取引擎)
+├── writer.py           # ✍️ AI 文案 (大模型评分与撰写)
+├── pusher.py           # 📲 消息分发 (Server酱 接口)
+├── setup_task.bat      # 🛠️ 自动化工具 (Windows 任务安装)
+├── data/               # 💾 数据持久化 (去重记录)
+└── logs/               # 📝 系统运行日志
 
 ```
 
 ---
 
-## 📄 许可与商业合作
+## 📄 商业与许可
 
-* **开源许可**：本项目基于 `Apache License 2.0`。
-* **商业授权**：若用于商业产品或需法律保证，请参阅 `COMMERCIAL.md` 或联系 `13822124279@163.com`。
+* **开源协议**：本项目遵循 **Apache License 2.0** 协议。
+* **商业授权**：若需商业使用或定制开发，请参考 `COMMERCIAL.md` 或发送邮件至 [13822124279@163.com]()。
 
 ---
 
-**把重复的抓取留给代码，把宝贵的思考留给未来。**
-
-```
-
-```
+**“把重复的看技术文章留给AI，把宝贵的思考留给未来”**
