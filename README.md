@@ -106,7 +106,7 @@ $env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py
 
 改setup_task文件，可以执行的同时设置定时任务的时间：
 ```bash
-$env:PUSH_HOUR=18; $env:PUSH_MIN=37; .\setup_task.bat
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\Users\13822\Desktop\wechat_moments_bot && set PUSH_HOUR=18 && set PUSH_MIN=44 && setup_task.bat" -Verb RunAs
 ```
 
 生成测试推送：

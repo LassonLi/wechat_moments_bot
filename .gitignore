@@ -34,3 +34,6 @@ data/seen_articles.json
 
 # macOS
 .DS_Store
+
+# special files
+MyBot*
