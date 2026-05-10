@@ -1,147 +1,112 @@
-# 📱 朋友圈助手 — 使用说明
-
-自动抓取 AI 技术文章与 HSBC 资讯，生成朋友圈配文并按计划推送到你的微信。
 
 ---
 
-## 📁 文件结构
+# 🚀 WeChat Moments Bot — 朋友圈技术人设智造家
+
+**「让每一条朋友圈，都在为你积累职业信用与行业声望。」**
+
+在这个信息过载的时代，持续且高质量的专业输出是构建**个人品牌**最快的路径。`WeChat Moments Bot` 专为追求卓越的开发者与金融科技从业者设计，自动化抓取全球顶尖 **AI 技术干货**与 **HSBC（汇丰）财讯**，通过大模型深度理解并撰写极具洞见的配文，助你轻松打造专业、前沿、有深度的朋友圈人设。
+
+---
+
+### 🌟 为什么选择这个工具？
+
+* **人设自动化**：告别“不知道发什么”，AI 每日为你精选高含金量资讯，确保你的朋友圈永远走在技术前沿。
+* **深度洞察力**：依托 Anthropic/QWEN 的强大总结能力，配文不再是简单的转发，而是带有“专家视角”的点评。
+* **极致省时**：从抓取、筛选、总结到推送，全流程自动化。你只需在 Server酱收到提醒后，顺手完成最后一次快意的转发。
+* **精准双赛道**：深度锁定 **AI 浪潮**与 **HSBC 全球金融动态**，完美契合 FinTech 复合型人才的定位。
+
+---
+
+## 📁 架构概览
 
 ```
 wechat_moments_bot/
-├── config.py          ← 配置（支持从环境变量读取敏感 key）
-├── main.py            ← 主程序入口
-├── fetcher.py         ← 抓取 RSS + 筛选文章
-├── writer.py          ← 调用大模型生成配文与评分逻辑
-├── pusher.py          ← 通过 Server酱 推送微信
-├── setup_task.bat     ← 一键配置 Windows 定时任务
-├── requirements.txt   ← 依赖库
-├── data/              ← 运行时数据（seen_articles.json 等）
-└── logs/              ← 运行日志
+├── config.py           ← 逻辑中枢（支持环境变量，安全合规）
+├── main.py             ← 指挥官：主程序入口
+├── fetcher.py          ← 侦察兵：全球 RSS 实时抓取
+├── writer.py           ← 智囊团：AI 驱动的配文生成与质量评估
+├── pusher.py           ← 传递者：通过 Server酱 直达微信
+├── setup_task.bat      ← 自动化：Windows 定时任务一键配置
+├── requirements.txt    ← 运行基石
+├── data/               ← 记忆库：文章去重记录
+└── logs/               ← 运行轨迹：详尽日志
+
 ```
 
 ---
 
-## ⚡ 快速开始（推荐顺序）
+## ⚡ 快速启程
 
-运行环境要求：Python 3.13
+**运行环境：** Python 3.13+
 
-1) 创建并激活虚拟环境（在项目根目录执行）：
+### 1. 搭建运行环境
 
-PowerShell (Windows)：
+建议使用虚拟环境以保持系统纯净：
+
+**Windows (PowerShell):**
+
 ```powershell
-# 创建虚拟环境（使用 .venv）
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-```
-
-CMD (Windows)：
-```cmd
-python -m venv .venv
-.venv\Scripts\activate.bat
-```
-
-macOS / Linux / WSL：
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-2) 安装依赖：
-```bash
 pip install -r requirements.txt
+
 ```
 
-3) 配置敏感 Key（推荐通过环境变量，不要把 Key 写入仓库）
+**macOS / Linux:**
 
-在 `config.py` 中，项目优先从环境变量读取两个敏感 Key：
-- `ANTHROPIC_API_KEY`（用于生成配文/评分）
-- `SERVERCHAN_SENDKEY`（用于通过 Server酱推送微信）
-
-在 PowerShell 设置（临时当前会话）：
-```powershell
-$env:ANTHROPIC_API_KEY = "sk-..."
-$env:SERVERCHAN_SENDKEY = "SCT..."
-```
-
-在 CMD（临时当前会话）：
-```cmd
-set ANTHROPIC_API_KEY=sk-...
-set SERVERCHAN_SENDKEY=SCT...
-```
-
-在 macOS/Linux（临时当前会话）：
 ```bash
-export ANTHROPIC_API_KEY="sk-..."
-export SERVERCHAN_SENDKEY="SCT..."
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
 ```
 
-（可选）把变量写入系统环境或用户 profile，以便长期使用。
+### 2. 配置你的“数字大脑” (API Keys)
 
-4) 运行一次测试：
+为了保障安全，建议通过环境变量注入 Key（避免源码泄露）：
+
+* `ANTHROPIC_API_KEY`: ANTHROPIC模型赋予 AI 思考能力。
+* `SERVERCHAN_SENDKEY`: 连接微信的通道。
+* `DASHSCOPE_API_KEY`: 中国制造qwen模型具有大国特色。
+
+> **小贴士**：在 Windows 中，可以通过“系统属性 -> 环境变量”持久化设置这些 Key，重启终端即可生效。
+
+### 3. 灵感初探（测试运行）
+
 ```bash
 python main.py test
-```
-如果收到测试推送，说明配置正确。
 
----
-
-## ⏰ 将脚本设置为每天自动运行（Windows 任务计划）
-
-使用 `setup_task.bat`（右键→以管理员运行）可以创建定时任务。修改运行时间请更新 `config.py` 中的 `SCHEDULE` 项，然后重新运行该脚本。
-
----
-
-## 使用流程简介
-
-每日运行时，系统会抓取候选文章、进行两轮（标题+内容）筛选并生成配文，最后通过 Server酱推送到微信。推送中包含文章标题、来源、配文文本，直接复制到朋友圈即可。
-
----
-
-## 常见命令
-
-立即运行一次：
-```bash
-$env:PUSH_HOUR=18; $env:PUSH_MIN=37; python main.py 
 ```
 
-改setup_task文件，可以执行的同时设置定时任务的时间：
-```bash
-Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\Users\13822\Desktop\wechat_moments_bot && set PUSH_HOUR=18 && set PUSH_MIN=44 && setup_task.bat" -Verb RunAs
-```
-
-生成测试推送：
-```bash
-python main.py test
-```
-
-查看本地日志：
-```bash
-ls logs/
-```
+*当手机响起 Server酱 的推送铃声时，你的朋友圈进化之旅已正式开启。*
 
 ---
 
-## 配置说明（简要）
+## ⏰ 生产力释放：自动化定时任务
 
-- `config.py` 中包含抓取源、筛选规则和推送节奏等设置；敏感 Key 推荐通过环境变量提供。
-- `AI_CRITERIA` / `HSBC_CRITERIA`：用于过滤与命中候选文章。
-- `RSS_SOURCES`：可在此添加或移除抓取源。
+无需手动干预，让脚本配合你的作息。
 
----
-
-## 许可与商业使用
-
-- 本仓库代码以 `Apache License 2.0` 许可（详见 `LICENSE`）。这允许广泛的使用、修改和分发，并包含专利授权条款。
-- 如果你计划将本项目用于商业产品、付费服务或需要额外的法律/支持保证，请参阅 `COMMERCIAL.md` 或联系 13822124279@163.com 获取商业授权。
-- 贡献者请阅读 `CONTRIBUTING.md`，提交代码即表示同意贡献许可条款（允许项目方在必要时以商业方式使用贡献）。
+1. **调整节奏**：在 `config.py` 中修改 `SCHEDULE`（例如设为早晨 8:30 或晚间 20:00）。
+2. **一键部署**：右键以**管理员身份**运行 `setup_task.bat`。
+3. **静候佳音**：脚本将化身你的虚拟助手，每天准时献上精心挑选的行业盛宴。
 
 ---
 
-## 开发 / 调试提示
+## 🛠️ 进阶自定义
 
-- 如果抓取某些 RSS 源失败，可检查网络或使用代理。错误信息会记录在 `logs/`。
-- 去重信息保存在 `data/seen_articles.json`，删除该文件可重置记录。
+* **定制品味**：修改 `AI_CRITERIA` 和 `HSBC_CRITERIA`，调教 AI 对文章的口味。
+* **扩展信源**：在 `RSS_SOURCES` 中加入你钟爱的技术博客或媒体。
+* **人设微调**：在 `writer.py` 中调整 Prompt，让 AI 的语气更符合你的真实性格（或是冷峻专家，或是幽默极客）。
 
 ---
 
-如果你希望我把虚拟环境创建命令写进 `setup_venv.bat` 或添加一个示例 `.env.example`，我可以继续处理。
+## 📄 许可与商业价值
+
+* **开源基因**：采用 `Apache License 2.0` 协议，开放、包容、受保护。
+* **商业授权**：如果您希望将此方案集成到商业产品或需要定制化开发支持，请联系：`13822124279@163.com` 获取 `COMMERCIAL.md` 说明。
+
+---
+
+**把重复的抓取留给代码，把宝贵的思考留给未来。**
+立即开始你的朋友圈**专业化**转型之路！ 🚀
