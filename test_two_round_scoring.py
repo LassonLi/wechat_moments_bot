@@ -86,6 +86,12 @@ def test_two_round_scoring():
             article_data["content_score_details"] = art.get("content_score_details", {})
             article_data["final_score"] = art.get("final_score", 0)
 
+        # 记录评分所用模型
+        if "content_score_model" in art:
+            article_data["evaluate_model"] = art["content_score_model"].get("model", "")
+        elif "title_score_model" in art:
+            article_data["evaluate_model"] = art["title_score_model"].get("model", "")
+
         # 推送信息（只有已推送的文章才有）
         if is_published:
             article_data["pushed_at"] = now

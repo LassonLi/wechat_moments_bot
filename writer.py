@@ -10,7 +10,9 @@
 import anthropic
 import json
 import os
+import requests
 from typing import Optional
+import trafilatura
 from config import (
     ANTHROPIC_API_KEY,
     COPYWRITING_PROMPT,
@@ -19,6 +21,20 @@ from config import (
     QWEN_BASE_URL,
     QWEN_MODEL,
 )
+
+
+def fetch_article_content(url: str) -> str | None:
+    """用 trafilatura 抓取并提取文章正文"""
+    try:
+        resp = requests.get(url, timeout=15, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; WechatMomentsBot/1.0)"
+        })
+        resp.raise_for_status()
+        text = trafilatura.extract(resp.text, include_comments=False, include_tables=False)
+        return text.strip() if text else None
+    except Exception as e:
+        print(f"  [WARN] 抓取正文失败: {e}")
+        return None
 
 
 def call_ai_chat(system_msg: str, user_msg: str, model: Optional[str] = None, max_tokens: int = 200) -> tuple[str, dict]:
@@ -194,7 +210,7 @@ def score_article_by_title(article: dict) -> tuple[float, dict]:
 
         # 构建评分详情
         score_details = {
-            "dimensions": {k: v for k, v in result.items() if k != "总分"},
+            "dimensions": {k: v for k, v in result.items() if k not in ("总分", "评语")},
             "comment": result.get("评语", "")
         }
 
@@ -255,6 +271,14 @@ def score_article_by_content(article: dict) -> tuple[float, dict]:
 
     user_msg = f"标题：{article['title']}\n来源：{article['source']}\n摘要：{article['summary']}"
 
+    # 抓取正文全文
+    full_text = fetch_article_content(article["url"])
+    if full_text:
+        # 截断防止超长，保留前 4000 字
+        if len(full_text) > 4000:
+            full_text = full_text[:4000] + "\n\n[... 以下内容已截断]"
+        user_msg += f"\n正文：\n{full_text}"
+
     try:
         result_text, meta = call_ai_chat(system_msg=system_msg, user_msg=user_msg, model=None, max_tokens=200)
         try:
@@ -285,7 +309,7 @@ def score_article_by_content(article: dict) -> tuple[float, dict]:
 
         # 构建评分详情
         score_details = {
-            "dimensions": {k: v for k, v in result.items() if k != "总分"},
+            "dimensions": {k: v for k, v in result.items() if k not in ("总分", "评语")},
             "comment": result.get("评语", "")
         }
 
@@ -303,7 +327,7 @@ def score_article_by_content(article: dict) -> tuple[float, dict]:
 def rank_and_select(articles: list[dict], target_count: int, category: str = "ai") -> tuple[list[dict], list[dict]]:
     """
     两轮AI评分筛选文章：
-    - AI类文章：第一轮用标题打分（仅标题评分），第二轮仅对标题评分最高的2篇进行完整内容打分
+    - AI类文章：第一轮用标题打分（仅标题评分），第二轮对标题评分最高的6篇进行完整内容打分，最终取最高分2篇
     - HSBC类文章：一轮完整内容打分
 
     返回: (selected_articles, all_scored_articles)
@@ -324,15 +348,15 @@ def rank_and_select(articles: list[dict], target_count: int, category: str = "ai
             art["title_score_details"] = details
             print(f"     [标题 {score:.1f}/10] {art['title'][:40]}... - {details.get('comment', '')}")
 
-        # 按标题分数排序，选出标题得分最高的2篇用于第二轮内容打分
+        # 按标题分数排序，选出标题得分最高的6篇用于第二轮内容打分
         articles.sort(key=lambda x: x.get("title_score", 0), reverse=True)
-        round1_selected = articles[:2]
-        round1_rejected = articles[2:]  # 未进入第二轮的文章
+        round1_selected = articles[:6]
+        round1_rejected = articles[6:]  # 未进入第二轮的文章
 
         print(f"  [OK] 第一轮完成，选出标题得分最高的 {len(round1_selected)} 篇用于第二轮内容评分")
         print(f"\n  -> 【第二轮】对 {len(round1_selected)} 篇文章进行完整内容打分...")
 
-        # 第二轮：仅对标题最高的2篇进行完整内容打分
+        # 第二轮：对标题最高的6篇进行完整内容打分
         for art in round1_selected:
             score, details = score_article_by_content(art)
             art["content_score"] = score
